@@ -130,6 +130,8 @@ export class RabbitMQService {
 
   async consumeMessages(queueName: QueueName, processMessage: (msg: amqp.Message) => void) {
     if (this.channel) {
+      this.channel.prefetch(1);
+      
       this.channel.consume(queueName, async (msg) => {
         try {
           if (msg !== null) {
