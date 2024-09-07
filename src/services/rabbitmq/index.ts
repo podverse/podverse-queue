@@ -130,6 +130,7 @@ export class RabbitMQService {
 
   async consumeMessages(queueName: QueueName, processMessage: (msg: amqp.Message) => void) {
     if (this.channel) {
+      // TODO: make an env var with a default value of 1
       this.channel.prefetch(1);
       
       this.channel.consume(queueName, async (msg) => {
