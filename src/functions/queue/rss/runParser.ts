@@ -1,3 +1,4 @@
+import { logger } from "podverse-helpers";
 import { parseRSSFeedAndSaveToDatabase } from "podverse-parser";
 import { QueueName, RabbitMQService } from "@queue/services/rabbitmq";
 
@@ -12,7 +13,7 @@ export const queueRSSRunParser = async (queueName: QueueName) => {
       const { url, podcast_index_id } = receivedMessage;
       await parseRSSFeedAndSaveToDatabase(url, podcast_index_id);
     } catch (error) {
-      console.error('Error processing message', error);
+      logger.error('Error processing message', error);
     }
   });
 };
