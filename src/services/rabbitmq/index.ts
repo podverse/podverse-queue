@@ -40,7 +40,7 @@ export class RabbitMQService {
         this.reconnect();
       });
       this.channel = await this.connection.createConfirmChannel();
-      // await this.createQueues();
+      await this.createQueues();
     } catch (error) {
       logger.error('Failed to connect to RabbitMQ', error);
       setTimeout(() => this.connect(), 5000); // Retry connection after 5 seconds

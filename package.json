@@ -8,7 +8,7 @@
     "dist/**/*"
   ],
   "scripts": {
-    "dev:watch": "nodemon --watch 'src' --watch $(realpath node_modules/podverse-helpers) --watch $(realpath node_modules/podverse-orm) --watch $(realpath node_modules/podverse-parser) --delay 500ms -x \"npm run build\"",
+    "dev:watch": "nodemon --watch 'src' --watch $(realpath node_modules/podverse-external-services) --watch $(realpath node_modules/podverse-helpers) --watch $(realpath node_modules/podverse-orm) --watch $(realpath node_modules/podverse-parser) --delay 500ms -x \"npm run build\"",
     "build": "tsc",
     "lint": "eslint ./src --ext .ts",
     "prepare": "npm run build",
@@ -19,6 +19,7 @@
   "dependencies": {
     "amqplib": "^0.10.4",
     "module-alias": "^2.2.3",
+    "podverse-external-services": "^5.0.0",
     "podverse-helpers": "^5.0.0",
     "podverse-orm": "^5.0.0",
     "podverse-parser": "^5.0.0"
