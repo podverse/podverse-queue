@@ -1,5 +1,5 @@
 import amqp, { Connection, ConfirmChannel } from "amqplib";
-import { logger } from 'podverse-helpers';
+import { logError, logger } from 'podverse-helpers';
 import { config } from '@queue/config';
 import { rabbitMQRequest } from '@queue/services/rabbitmq/rabbitMQRequest';
 
@@ -24,15 +24,15 @@ export class RabbitMQService {
     try {
       await this.connect();
     } catch (error) {
-      logger.error('Failed to initialize RabbitMQ connection', error);
+      logError('Failed to initialize RabbitMQ connection', error as Error);
     }
   }
 
   private async connect() {
     try {
       this.connection = await amqp.connect(connectionUri);
-      this.connection.on('error', (err: unknown) => {
-        logger.error(`RabbitMQ connection error: ${err}`);
+      this.connection.on('error', (error: unknown) => {
+        logError('connect: RabbitMQ connection error', error as Error);
         this.reconnect();
       });
       this.connection.on('close', () => {
@@ -42,7 +42,7 @@ export class RabbitMQService {
       this.channel = await this.connection.createConfirmChannel();
       await this.createQueues();
     } catch (error) {
-      logger.error('Failed to connect to RabbitMQ', error);
+      logError('connect: Failed to connect to RabbitMQ', error as Error);
       setTimeout(() => this.connect(), 5000); // Retry connection after 5 seconds
     }
   }
@@ -52,7 +52,7 @@ export class RabbitMQService {
       try {
         await this.connection.close();
       } catch (error) {
-        logger.error('Error closing RabbitMQ connection during reconnect', error);
+        logError('reconnect: Error closing RabbitMQ connection during reconnect', error as Error);
       }
     }
     this.connection = null;
@@ -65,7 +65,7 @@ export class RabbitMQService {
       try {
         await this.assertQueue(queueName);
       } catch (error) {
-        throw new Error(`Failed to create queue ${queueName} ${error}`);
+        throw new Error(`createQueues: Failed to create queue ${queueName} ${error}`);
       }
     }
   }
@@ -77,7 +77,7 @@ export class RabbitMQService {
       });
       logger.info(`Queue ${queueName} is ready`);
     } else {
-      logger.error('Channel is not initialized');
+      logError('assertQueue: Channel is not initialized');
     }
   }
  
@@ -88,10 +88,10 @@ export class RabbitMQService {
         const messageBuffer = Buffer.from(messageString);
 
         await new Promise<void>((resolve, reject) => {
-          this.channel!.sendToQueue(queueName, messageBuffer, { persistent: true }, (err) => {
-            if (err) {
-              logger.error(`Failed to send message to queue ${queueName}: ${messageString}`, err);
-              reject(err);
+          this.channel!.sendToQueue(queueName, messageBuffer, { persistent: true }, (error) => {
+            if (error) {
+              logError(`sendMessage: Failed to send message to queue ${queueName}: ${messageString}`, error as Error);
+              reject(error);
             } else {
               logger.info(`Message sent to queue ${queueName}: ${messageString}`);
               resolve();
@@ -100,12 +100,10 @@ export class RabbitMQService {
         });
 
       } catch (error) {
-        if (error instanceof Error) {
-          logger.error(`Error sending message to queue ${queueName}: ${error.message}`);
-        }
+        logError(`sendMessage: Error sending message to queue ${queueName}`, error as Error);
       }
     } else {
-      logger.error('Channel is not initialized');
+      logError('sendMessage: Channel is not initialized');
     }
   }
 
@@ -123,7 +121,7 @@ export class RabbitMQService {
         return null;
       }
     } else {
-      logger.error('Channel is not initialized');
+      logError('getMessage: Channel is not initialized');
       return null;
     }
   }
@@ -148,7 +146,7 @@ export class RabbitMQService {
       }, { noAck: false });
       logger.info(`Consumer is set up for queue ${queueName}`);
     } else {
-      logger.error('Channel is not initialized');
+      logError('consumeMessages: Channel is not initialized');
     }
   }
   
@@ -157,7 +155,7 @@ export class RabbitMQService {
       const response: never[] = await rabbitMQRequest('/queues');
       return response.map((queue: { name: string }) => queue.name);
     } catch (error) {
-      logger.error('Failed to list queues', error);
+      logError('listAllQueues: Failed to list queues', error as Error);
       return [];
     }
   }
@@ -168,10 +166,10 @@ export class RabbitMQService {
         await this.channel.deleteQueue(queueName);
         logger.info(`Queue ${queueName} deleted`);
       } catch (error) {
-        logger.error(`Failed to delete queue ${queueName}`, error);
+        logError(`deleteQueue: Failed to delete queue ${queueName}`, error as Error);
       }
     } else {
-      logger.error('Channel is not initialized');
+      logError('deleteQueue: Channel is not initialized');
     }
   }
 

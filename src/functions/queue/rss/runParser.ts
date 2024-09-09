@@ -1,4 +1,4 @@
-import { logger } from "podverse-helpers";
+import { logError, logger } from "podverse-helpers";
 import { parseRSSFeedAndSaveToDatabase } from "podverse-parser";
 import { QueueName, RabbitMQService } from "@queue/services/rabbitmq";
 
@@ -17,10 +17,10 @@ export const queueRSSRunParser = async (queueName: QueueName) => {
       if (url || podcast_index_id) {
         await parseRSSFeedAndSaveToDatabase(url, podcast_index_id);
       } else {
-        logger.error('queueRSSRunParser: url or podcast_index_id not found in message', receivedMessage);
+        throw new Error(`queueRSSRunParser: url or podcast_index_id not found in message ${receivedMessage?.toString()}`);
       }
     } catch (error) {
-      logger.error('Error processing message', error);
+      logError('Error processing message', error as Error);
     }
   });
 };
