@@ -10,8 +10,15 @@ export const queueRSSRunParser = async (queueName: QueueName) => {
     try {
       const receivedMessageString = message.content.toString();
       const receivedMessage = JSON.parse(receivedMessageString);
+
       const { url, podcast_index_id } = receivedMessage;
-      await parseRSSFeedAndSaveToDatabase(url, podcast_index_id);
+      logger.info(`url ${url}`);
+      logger.info(`podcast_index_id ${podcast_index_id}`);
+      if (url || podcast_index_id) {
+        await parseRSSFeedAndSaveToDatabase(url, podcast_index_id);
+      } else {
+        logger.error('queueRSSRunParser: url or podcast_index_id not found in message', receivedMessage);
+      }
     } catch (error) {
       logger.error('Error processing message', error);
     }
