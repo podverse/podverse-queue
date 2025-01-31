@@ -1,6 +1,6 @@
 # podverse-queue
 
-A module for handling Podverse AMQP (RabbitMQ) interactions.
+A module for handling Podverse Queue (RabbitMQ / AMQP) interactions.
 
 ## Dev Setup
 
