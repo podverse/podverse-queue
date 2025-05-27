@@ -1,4 +1,4 @@
-import amqp, { Connection, ConfirmChannel } from "amqplib";
+import amqp, { ChannelModel, ConfirmChannel } from "amqplib";
 import { logError, logger } from 'podverse-helpers';
 import { config } from '@queue/config';
 import { rabbitMQRequest } from '@queue/services/rabbitmq/rabbitMQRequest';
@@ -17,7 +17,7 @@ type QueueRSSMessage = {
 type Message = QueueRSSMessage;
 
 export class RabbitMQService {
-  private connection: Connection | null = null;
+  private connection: ChannelModel | null = null;
   private channel: ConfirmChannel | null = null;
 
   async initialize() {
