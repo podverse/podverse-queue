@@ -1,3 +1,4 @@
+import { FeedService } from 'podverse-orm';
 import { podcastIndexService } from '@queue/factories/podcastIndex';
 import { QueueName, RabbitMQService } from "@queue/services/rabbitmq";
 
@@ -12,11 +13,17 @@ export const queueRSSAddRecentlyUpdatedFeedsFromPodcastIndex = async (options: Q
   await rabbitMQService.initialize();
 
   for (const feed of recentlyUpdatedFeeds) {
-    const message = {
-      url: feed.feedUrl,
-      podcast_index_id: feed.feedId
-    };
+    const feedService = new FeedService();
+    const dbFeed = await feedService.getByPodcastIndexId({ podcast_index_id: feed.feedId });
+    const shouldAddToQueue = !!dbFeed;
 
-    await rabbitMQService.sendMessage(options.queueName, message);
+    if (shouldAddToQueue) {
+      const message = {
+        url: feed.feedUrl,
+        podcast_index_id: feed.feedId
+      };
+  
+      await rabbitMQService.sendMessage(options.queueName, message);
+    }
   }
 };
