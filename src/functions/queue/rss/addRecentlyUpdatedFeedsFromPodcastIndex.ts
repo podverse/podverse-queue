@@ -2,12 +2,14 @@ import { FeedService } from 'podverse-orm';
 import { podcastIndexService } from '@queue/factories/podcastIndex';
 import { QueueName, RabbitMQService } from "@queue/services/rabbitmq";
 
-type QueueRSSAddAllOptions = {
+type QueueRSSAddAllRecentlyUpdatedFeedsOptions = {
   queueName: QueueName;
+  sinceRange: number;
 }
 
-export const queueRSSAddRecentlyUpdatedFeedsFromPodcastIndex = async (options: QueueRSSAddAllOptions) => {
-  const recentlyUpdatedFeeds = await podcastIndexService.recentGetData();
+export const queueRSSAddRecentlyUpdatedFeedsFromPodcastIndex = async (options: QueueRSSAddAllRecentlyUpdatedFeedsOptions) => {
+  const sinceRange = options.sinceRange;
+  const recentlyUpdatedFeeds = await podcastIndexService.recentGetData(sinceRange);
   
   const rabbitMQService = new RabbitMQService();
   await rabbitMQService.initialize();
