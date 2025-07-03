@@ -132,15 +132,15 @@ export class RabbitMQService {
       this.channel.prefetch(1);
       
       this.channel.consume(queueName, async (msg) => {
-        try {
-          if (msg !== null) {
+        if (msg !== null) {
+          try {
             const messageContent = msg.content.toString();
             logger.info(`Received message from queue ${queueName}: ${messageContent}`);
             await processMessage(msg);
-          }
-        } finally {
-          if (msg !== null && this.channel) {
-            this.channel.ack(msg);
+            this.channel!.ack(msg);
+          } catch (err) {
+            logError('Error processing message', err as Error);
+            this.channel!.nack(msg, false, false);
           }
         }
       }, { noAck: false });
