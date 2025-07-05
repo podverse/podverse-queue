@@ -16,10 +16,8 @@ export const queueRSSAddRecentlyUpdatedFeedsFromPodcastIndex = async (options: Q
 
   for (const feed of recentlyUpdatedFeeds) {
     const feedService = new FeedService();
-    console.log(`Processing feed: ${feed.feedId}, url: ${feed.feedUrl}`);
     const dbFeed = await feedService.getByPodcastIndexId({ podcast_index_id: feed.feedId });
     const shouldAddToQueue = !!dbFeed;
-    console.log(`Should add to queue? ${shouldAddToQueue}`);
 
     if (shouldAddToQueue) {
       const message = {
