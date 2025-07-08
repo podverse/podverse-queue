@@ -130,17 +130,19 @@ export class RabbitMQService {
     if (this.channel) {
       // TODO: make an env var with a default value of 1
       this.channel.prefetch(1);
-      
-      this.channel.consume(queueName, async (msg) => {
+
+      const channel = this.channel;
+
+      channel.consume(queueName, async (msg) => {
         if (msg !== null) {
           try {
             const messageContent = msg.content.toString();
             logger.info(`Received message from queue ${queueName}: ${messageContent}`);
             await processMessage(msg);
-            this.channel!.ack(msg);
+            channel.ack(msg);
           } catch (err) {
             logError('Error processing message', err as Error);
-            this.channel!.nack(msg, false, false);
+            channel?.nack?.(msg, false, false);
           }
         }
       }, { noAck: false });
