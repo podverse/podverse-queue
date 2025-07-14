@@ -7,4 +7,4 @@ export { queueRSSAddTrendingPodcastsFromPodcastIndex } from './functions/queue/r
 export { queueDeleteAll } from './functions/queue/deleteAll';
 export { queueRSSRunParser } from './functions/queue/rss/runParser';
 
-export { QueueName, queueNames } from './services/rabbitmq';
+export { RabbitMQService, RabbitMQServiceParams, QueueName, queueNames } from './services/rabbitmq';

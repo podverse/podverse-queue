@@ -5,11 +5,13 @@ type QueueRSSAddAllConfig = {
   queueName: QueueName;
 }
 
-export const queueRSSAddAll = async (config: QueueRSSAddAllConfig) => {
+export const queueRSSAddAll = async (
+  rabbitMQService: RabbitMQService,
+  config: QueueRSSAddAllConfig
+) => {
   const feedService = new FeedService();  
   const feeds = await feedService.getAll();
   
-  const rabbitMQService = new RabbitMQService();
   await rabbitMQService.initialize();
 
   for (const feed of feeds) {

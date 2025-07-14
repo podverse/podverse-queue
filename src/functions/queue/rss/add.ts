@@ -6,8 +6,10 @@ type QueueRSSAddOptions = {
   podcastIndexId: number;
 }
 
-export const queueRSSAdd = async (options: QueueRSSAddOptions) => {
-  const rabbitMQService = new RabbitMQService();
+export const queueRSSAdd = async (
+  rabbitMQService: RabbitMQService,
+  options: QueueRSSAddOptions
+) => {
   await rabbitMQService.initialize();
 
   const message = {
