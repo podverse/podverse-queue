@@ -1,6 +1,6 @@
 import amqp, { ChannelModel, ConfirmChannel } from "amqplib";
 import { RabbitMQRequestService } from '@queue/services/rabbitmq/requestService';
-import { LoggerService } from 'podverse-helpers';
+import { LoggerService } from 'podverse-helpers/dist/lib/backend/logger';
 
 export type AMQPMessage = amqp.Message;
 export type QueueName = 'rss-slow' | 'rss-fast' | 'rss-live';
