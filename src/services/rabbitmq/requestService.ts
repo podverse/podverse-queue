@@ -27,11 +27,12 @@ export class RabbitMQRequestService {
       password: this.password
     };
 
-    const response: string = await request(managementUri, { auth });
-    if (typeof response === 'string') {
-      return JSON.parse(response) as T;
+    const response = await request(managementUri, { auth });
+    const data = response.data;
+    if (typeof data === 'string') {
+      return JSON.parse(data) as T;
     } else {
-      return response as T;
+      return data as T;
     }
   }
 }
