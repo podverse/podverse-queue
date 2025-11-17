@@ -4,8 +4,7 @@ import { LoggerService } from 'podverse-helpers/dist/lib/backend/logger';
 import crypto from 'crypto';
 
 // Public types maintained for backwards compatibility
-export type QueueName = 'rss-normal' |  'rss-on-demand' | 'rss-live';
-export const validQueueNames: QueueName[] = ['rss-normal', 'rss-on-demand', 'rss-live'];
+export type MQQueueName = 'rss-normal' |  'rss-on-demand' | 'rss-live';
 
 type QueueRSSMessage = {
   url: string;
@@ -13,6 +12,13 @@ type QueueRSSMessage = {
 };
 
 type Message = QueueRSSMessage;
+
+type SendMessageParams = {
+  queueName: MQQueueName
+  message: Message
+  priority: 'normal' | 'slow'
+  dedupeCacheTimeMS: number | null
+}
 
 export interface ActiveMQArtemisServiceParams { // Keeping same name for external compatibility
   protocol: string;
@@ -24,8 +30,8 @@ export interface ActiveMQArtemisServiceParams { // Keeping same name for externa
 
 export class ActiveMQArtemisService { // Name preserved
   private connection: Connection | null = null;
-  private senders: Map<QueueName, Sender> = new Map();
-  private receivers: Map<QueueName, Receiver> = new Map();
+  private senders: Map<MQQueueName, Sender> = new Map();
+  private receivers: Map<MQQueueName, Receiver> = new Map();
   private params: ActiveMQArtemisServiceParams;
   private logger: LoggerService;
   private connecting = false;
@@ -100,7 +106,7 @@ export class ActiveMQArtemisService { // Name preserved
     });
   }
 
-  private async ensureSender(queueName: QueueName): Promise<Sender> {
+  private async ensureSender(queueName: MQQueueName): Promise<Sender> {
     if (this.senders.has(queueName)) return this.senders.get(queueName)!;
     if (!this.connection) await this.connect();
     const sender = this.connection!.open_sender({ target: { address: queueName } });
@@ -113,7 +119,7 @@ export class ActiveMQArtemisService { // Name preserved
     });
   }
 
-  private async ensureReceiver(queueName: QueueName): Promise<Receiver> {
+  private async ensureReceiver(queueName: MQQueueName): Promise<Receiver> {
     if (this.receivers.has(queueName)) return this.receivers.get(queueName)!;
     if (!this.connection) await this.connect();
     const receiver = this.connection!.open_receiver({ source: { address: queueName }, credit_window: 0 });
@@ -126,28 +132,30 @@ export class ActiveMQArtemisService { // Name preserved
     });
   }
 
-  // All queue creation & management operations removed. Queues must exist already.
-
-  private computeDuplicateId(queueName: QueueName, message: Message): string {
-    const hash = crypto.createHash('sha256').update(JSON.stringify(message)).digest('hex');
-    return `${queueName}:${hash}`; // Stable ID for deduplication of identical payloads
+  private computeDuplicateId(queueName: MQQueueName, message: Message, dedupeCacheTimeMS: number | null): string | null {
+    if (!dedupeCacheTimeMS || dedupeCacheTimeMS <= 0) return null;
+    const baseHash = crypto.createHash('sha256').update(JSON.stringify(message)).digest('hex');
+    const now = Date.now();
+    const bucketStart = Math.floor(now / dedupeCacheTimeMS) * dedupeCacheTimeMS;
+    return `${queueName}:${bucketStart}:${baseHash}`;
   }
 
-  async sendMessage(queueName: QueueName, message: Message, priority: 'normal' | 'slow'): Promise<void> {
+  async sendMessage(params: SendMessageParams): Promise<void> {
+    const { queueName, message, priority, dedupeCacheTimeMS } = params;
     try {
       const sender = await this.ensureSender(queueName);
       const bodyString = JSON.stringify(message);
-      const duplicateId = this.computeDuplicateId(queueName, message);
-      const priorityValue = !priority || priority === 'normal' ? 5 : 1; // normal = 5, slow = 1
+      const duplicateId = this.computeDuplicateId(queueName, message, dedupeCacheTimeMS);
+      const priorityValue = !priority || priority === 'normal' ? 5 : 1;
       await new Promise<void>((resolve, reject) => {
         const delivery = sender.send({
           body: bodyString,
           durable: true,
           priority: priorityValue,
           content_type: 'application/json',
-          application_properties: {
-            _AMQ_DUPL_ID: duplicateId
-          }
+          ...(duplicateId
+            ? { application_properties: { _AMQ_DUPL_ID: duplicateId } }
+            : {}) // omit property when no dedupe
         });
         const onAccepted = (context: EventContext) => {
           if (context.delivery === delivery) {
@@ -173,9 +181,9 @@ export class ActiveMQArtemisService { // Name preserved
     }
   }
 
-  async getMessage(queueName: string): Promise<Message | null> {
+  async getMessage(queueName: MQQueueName): Promise<Message | null> {
     try {
-      const receiver = await this.ensureReceiver(queueName as QueueName);
+      const receiver = await this.ensureReceiver(queueName as MQQueueName);
       // Request one message (credit 1)
       receiver.add_credit(1);
       return await new Promise<Message | null>((resolve) => {
@@ -203,7 +211,7 @@ export class ActiveMQArtemisService { // Name preserved
     }
   }
 
-  async consumeMessages(queueName: QueueName, processMessage: (msg: { content: Buffer; raw: Delivery; queue: QueueName }) => Promise<void> | void) {
+  async consumeMessages(queueName: MQQueueName, processMessage: (msg: { content: Buffer; raw: Delivery; queue: MQQueueName }) => Promise<void> | void) {
     try {
       const receiver = await this.ensureReceiver(queueName);
       const handleMessage = async (context: EventContext) => {

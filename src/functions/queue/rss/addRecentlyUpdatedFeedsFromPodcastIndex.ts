@@ -1,12 +1,11 @@
-import { FeedService } from 'podverse-orm';
-import { QueueName, ActiveMQArtemisService } from "@queue/services/activeMQArtemis";
 import { PodcastIndexService } from 'podverse-external-services';
+import { MQQueueConfig } from 'podverse-helpers';
+import { FeedService } from 'podverse-orm';
+import { ActiveMQArtemisService } from "@queue/services/activeMQArtemis";
 import { MQFeedMessage } from '@queue/types/mq';
 
-type QueueRSSAddAllRecentlyUpdatedFeedsOptions = {
-  queueName: QueueName;
+type QueueRSSAddAllRecentlyUpdatedFeedsOptions = MQQueueConfig & {
   sinceRange: number;
-  priority: 'normal' | 'slow';
 }
 
 export const queueRSSAddRecentlyUpdatedFeedsFromPodcastIndex = async (
@@ -30,7 +29,12 @@ export const queueRSSAddRecentlyUpdatedFeedsFromPodcastIndex = async (
         podcast_index_id: feed.feedId
       };
   
-      await activeMQArtemisService.sendMessage(options.queueName, message, options.priority);
+      await activeMQArtemisService.sendMessage({
+        queueName: options.queueName,
+        message,
+        priority: options.priority,
+        dedupeCacheTimeMS: options.dedupeCacheTimeMS
+      });
     }
   }
 };

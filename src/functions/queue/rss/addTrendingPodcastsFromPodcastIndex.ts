@@ -1,11 +1,10 @@
 import { PodcastIndexService } from 'podverse-external-services';
-import { QueueName, ActiveMQArtemisService } from '@queue/services/activeMQArtemis';
+import { MQQueueConfig } from 'podverse-helpers';
+import { ActiveMQArtemisService } from '@queue/services/activeMQArtemis';
 import { MQFeedMessage } from '@queue/types/mq';
 
-type AddTrendingPodcastsOptions = {
-  queueName: QueueName;
+type AddTrendingPodcastsOptions = MQQueueConfig & {
   maxFeeds?: number;
-  priority: 'normal' | 'slow';
 };
 
 export const queueRSSAddTrendingPodcastsFromPodcastIndex = async (
@@ -26,7 +25,12 @@ export const queueRSSAddTrendingPodcastsFromPodcastIndex = async (
         podcast_index_id: feed.id
       };
       
-      await activeMQArtemisService.sendMessage(queueName, message, options.priority);
+      await activeMQArtemisService.sendMessage({
+        queueName,
+        message,
+        priority: options.priority,
+        dedupeCacheTimeMS: options.dedupeCacheTimeMS
+      });
     }
   } catch (error) {
     console.error('[queueRSSAddTrendingPodcastsFromPodcastIndex] Error adding trending podcasts:', error);

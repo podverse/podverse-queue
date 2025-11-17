@@ -1,11 +1,10 @@
-import { QueueName, ActiveMQArtemisService } from "@queue/services/activeMQArtemis";
+import { ActiveMQArtemisService } from "@queue/services/activeMQArtemis";
 import { MQFeedMessage } from "@queue/types/mq";
+import { MQQueueConfig } from "podverse-helpers";
 
-type QueueRSSAddOptions = {
-  queueName: QueueName;
+type QueueRSSAddOptions = MQQueueConfig & {
   feedUrl: string;
   podcastIndexId: number;
-  priority: 'normal' | 'slow';
 }
 
 export const queueRSSAdd = async (
@@ -19,5 +18,10 @@ export const queueRSSAdd = async (
     podcast_index_id: options.podcastIndexId
   };
 
-  await activeMQArtemisService.sendMessage(options.queueName, message, options.priority);
+  await activeMQArtemisService.sendMessage({
+    queueName: options.queueName,
+    message,
+    priority: options.priority,
+    dedupeCacheTimeMS: options.dedupeCacheTimeMS
+  });
 };

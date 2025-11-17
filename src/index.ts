@@ -6,4 +6,4 @@ export { queueRSSAddRecentlyUpdatedFeedsFromPodcastIndex } from './functions/que
 export { queueRSSAddTrendingPodcastsFromPodcastIndex } from './functions/queue/rss/addTrendingPodcastsFromPodcastIndex';
 export { queueRSSRunParser } from './functions/queue/rss/runParser';
 
-export { ActiveMQArtemisService, ActiveMQArtemisServiceParams, QueueName, validQueueNames } from './services/activeMQArtemis';
+export { ActiveMQArtemisService, ActiveMQArtemisServiceParams } from './services/activeMQArtemis';
