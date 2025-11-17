@@ -4,6 +4,7 @@ import { MQFeedMessage } from "@queue/types/mq";
 
 type QueueRSSAddAllConfig = {
   queueName: QueueName;
+  priority: 'normal' | 'slow';
 }
 
 export const queueRSSAddAll = async (
@@ -21,6 +22,6 @@ export const queueRSSAddAll = async (
       podcast_index_id: feed.channel.podcast_index_id
     };
 
-    await activeMQArtemisService.sendMessage(config.queueName, message);
+    await activeMQArtemisService.sendMessage(config.queueName, message, config.priority);
   }
 };

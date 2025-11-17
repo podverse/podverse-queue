@@ -5,6 +5,7 @@ import { MQFeedMessage } from '@queue/types/mq';
 type AddTrendingPodcastsOptions = {
   queueName: QueueName;
   maxFeeds?: number;
+  priority: 'normal' | 'slow';
 };
 
 export const queueRSSAddTrendingPodcastsFromPodcastIndex = async (
@@ -25,7 +26,7 @@ export const queueRSSAddTrendingPodcastsFromPodcastIndex = async (
         podcast_index_id: feed.id
       };
       
-      await activeMQArtemisService.sendMessage(queueName, message);
+      await activeMQArtemisService.sendMessage(queueName, message, options.priority);
     }
   } catch (error) {
     console.error('[queueRSSAddTrendingPodcastsFromPodcastIndex] Error adding trending podcasts:', error);

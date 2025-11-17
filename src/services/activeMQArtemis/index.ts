@@ -4,8 +4,8 @@ import { LoggerService } from 'podverse-helpers/dist/lib/backend/logger';
 import crypto from 'crypto';
 
 // Public types maintained for backwards compatibility
-export type QueueName = 'rss-slow' | 'rss-normal' |  'rss-on-demand' | 'rss-live';
-export const validQueueNames: QueueName[] = ['rss-slow', 'rss-normal', 'rss-on-demand', 'rss-live'];
+export type QueueName = 'rss-normal' |  'rss-on-demand' | 'rss-live';
+export const validQueueNames: QueueName[] = ['rss-normal', 'rss-on-demand', 'rss-live'];
 
 type QueueRSSMessage = {
   url: string;
@@ -133,15 +133,17 @@ export class ActiveMQArtemisService { // Name preserved
     return `${queueName}:${hash}`; // Stable ID for deduplication of identical payloads
   }
 
-  async sendMessage(queueName: QueueName, message: Message): Promise<void> {
+  async sendMessage(queueName: QueueName, message: Message, priority: 'normal' | 'slow'): Promise<void> {
     try {
       const sender = await this.ensureSender(queueName);
       const bodyString = JSON.stringify(message);
       const duplicateId = this.computeDuplicateId(queueName, message);
+      const priorityValue = !priority || priority === 'normal' ? 5 : 1; // normal = 5, slow = 1
       await new Promise<void>((resolve, reject) => {
         const delivery = sender.send({
           body: bodyString,
           durable: true,
+          priority: priorityValue,
           content_type: 'application/json',
           application_properties: {
             _AMQ_DUPL_ID: duplicateId

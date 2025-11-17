@@ -5,6 +5,7 @@ type QueueRSSAddOptions = {
   queueName: QueueName;
   feedUrl: string;
   podcastIndexId: number;
+  priority: 'normal' | 'slow';
 }
 
 export const queueRSSAdd = async (
@@ -18,5 +19,5 @@ export const queueRSSAdd = async (
     podcast_index_id: options.podcastIndexId
   };
 
-  await activeMQArtemisService.sendMessage(options.queueName, message);
+  await activeMQArtemisService.sendMessage(options.queueName, message, options.priority);
 };

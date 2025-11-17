@@ -6,6 +6,7 @@ import { MQFeedMessage } from '@queue/types/mq';
 type QueueRSSAddAllRecentlyUpdatedFeedsOptions = {
   queueName: QueueName;
   sinceRange: number;
+  priority: 'normal' | 'slow';
 }
 
 export const queueRSSAddRecentlyUpdatedFeedsFromPodcastIndex = async (
@@ -29,7 +30,7 @@ export const queueRSSAddRecentlyUpdatedFeedsFromPodcastIndex = async (
         podcast_index_id: feed.feedId
       };
   
-      await activeMQArtemisService.sendMessage(options.queueName, message);
+      await activeMQArtemisService.sendMessage(options.queueName, message, options.priority);
     }
   }
 };
