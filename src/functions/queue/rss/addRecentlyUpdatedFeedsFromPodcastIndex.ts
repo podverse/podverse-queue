@@ -1,6 +1,7 @@
 import { FeedService } from 'podverse-orm';
 import { QueueName, ActiveMQArtemisService } from "@queue/services/activeMQArtemis";
 import { PodcastIndexService } from 'podverse-external-services';
+import { MQFeedMessage } from '@queue/types/mq';
 
 type QueueRSSAddAllRecentlyUpdatedFeedsOptions = {
   queueName: QueueName;
@@ -23,7 +24,7 @@ export const queueRSSAddRecentlyUpdatedFeedsFromPodcastIndex = async (
     const shouldAddToQueue = !!dbFeed;
 
     if (shouldAddToQueue) {
-      const message = {
+      const message: MQFeedMessage = {
         url: feed.feedUrl,
         podcast_index_id: feed.feedId
       };

@@ -1,4 +1,5 @@
 import { QueueName, ActiveMQArtemisService } from "@queue/services/activeMQArtemis";
+import { MQFeedMessage } from "@queue/types/mq";
 
 type QueueRSSAddOptions = {
   queueName: QueueName;
@@ -12,7 +13,7 @@ export const queueRSSAdd = async (
 ) => {
   await activeMQArtemisService.initialize();
 
-  const message = {
+  const message: MQFeedMessage = {
     url: options.feedUrl,
     podcast_index_id: options.podcastIndexId
   };

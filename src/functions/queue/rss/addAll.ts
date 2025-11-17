@@ -1,5 +1,6 @@
 import { FeedService } from "podverse-orm";
 import { QueueName, ActiveMQArtemisService } from "@queue/services/activeMQArtemis";
+import { MQFeedMessage } from "@queue/types/mq";
 
 type QueueRSSAddAllConfig = {
   queueName: QueueName;
@@ -15,7 +16,7 @@ export const queueRSSAddAll = async (
   await activeMQArtemisService.initialize();
 
   for (const feed of feeds) {
-    const message = {
+    const message: MQFeedMessage = {
       url: feed.url,
       podcast_index_id: feed.channel.podcast_index_id
     };

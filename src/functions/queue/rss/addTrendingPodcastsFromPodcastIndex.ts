@@ -1,5 +1,6 @@
 import { PodcastIndexService } from 'podverse-external-services';
 import { QueueName, ActiveMQArtemisService } from '@queue/services/activeMQArtemis';
+import { MQFeedMessage } from '@queue/types/mq';
 
 type AddTrendingPodcastsOptions = {
   queueName: QueueName;
@@ -19,7 +20,7 @@ export const queueRSSAddTrendingPodcastsFromPodcastIndex = async (
     await activeMQArtemisService.initialize();
 
     for (const feed of feeds) {
-      const message = {
+      const message: MQFeedMessage = {
         url: feed.url,
         podcast_index_id: feed.id
       };
