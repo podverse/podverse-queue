@@ -5,7 +5,7 @@ import crypto from 'crypto';
 
 // Public types maintained for backwards compatibility
 export type QueueName = 'rss-slow' | 'rss-normal' |  'rss-on-demand' | 'rss-live';
-export const queueNames: QueueName[] = ['rss-slow', 'rss-normal', 'rss-on-demand', 'rss-live'];
+export const validQueueNames: QueueName[] = ['rss-slow', 'rss-normal', 'rss-on-demand', 'rss-live'];
 
 type QueueRSSMessage = {
   url: string;
@@ -227,10 +227,5 @@ export class ActiveMQArtemisService { // Name preserved
     } catch (error) {
       this.logger.logError('consumeMessages: Failed to set consumer', error as Error);
     }
-  }
-
-  async listAllQueues(): Promise<string[]> {
-    // Placeholder: without management API integration return known queues
-    return [...queueNames];
   }
 }
