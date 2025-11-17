@@ -4,8 +4,8 @@ import { LoggerService } from 'podverse-helpers/dist/lib/backend/logger';
 import crypto from 'crypto';
 
 // Public types maintained for backwards compatibility
-export type QueueName = 'rss-slow' | 'rss-fast' | 'rss-live';
-export const queueNames: QueueName[] = ['rss-slow', 'rss-fast', 'rss-live'];
+export type QueueName = 'rss-slow' | 'rss-normal' |  'rss-on-demand' | 'rss-live';
+export const queueNames: QueueName[] = ['rss-slow', 'rss-normal', 'rss-on-demand', 'rss-live'];
 
 type QueueRSSMessage = {
   url: string;
