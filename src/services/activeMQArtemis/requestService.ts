@@ -1,14 +1,14 @@
 import { request } from 'podverse-helpers';
-import { RabbitMQServiceParams } from '.';
+import { ActiveMQArtemisServiceParams } from '.';
 
-export class RabbitMQRequestService {
+export class ActiveMQArtemisRequestService {
   private protocol: string;
   private host: string;
   private username: string;
   private password: string;
   private port: number;
 
-  constructor({ protocol, host, username, password, port }: RabbitMQServiceParams) {
+  constructor({ protocol, host, username, password, port }: ActiveMQArtemisServiceParams) {
     this.protocol = protocol;
     this.host = host;
     this.username = username;
@@ -18,7 +18,7 @@ export class RabbitMQRequestService {
 
   async request<T>(path: string): Promise<T> {
     if (!this.username || !this.password) {
-      throw new Error('RabbitMQ username and password are required');
+      throw new Error('ActiveMQArtemis username and password are required');
     }
 
     const managementUri = `${this.protocol}://${this.host}:${this.port}/api${path}`;

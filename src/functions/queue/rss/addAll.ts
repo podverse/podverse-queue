@@ -1,18 +1,18 @@
 import { FeedService } from "podverse-orm";
-import { QueueName, RabbitMQService } from "@queue/services/rabbitmq";
+import { QueueName, ActiveMQArtemisService } from "@queue/services/activeMQArtemis";
 
 type QueueRSSAddAllConfig = {
   queueName: QueueName;
 }
 
 export const queueRSSAddAll = async (
-  rabbitMQService: RabbitMQService,
+  activeMQArtemisService: ActiveMQArtemisService,
   config: QueueRSSAddAllConfig
 ) => {
   const feedService = new FeedService();  
   const feeds = await feedService.getAll();
   
-  await rabbitMQService.initialize();
+  await activeMQArtemisService.initialize();
 
   for (const feed of feeds) {
     const message = {
@@ -20,6 +20,6 @@ export const queueRSSAddAll = async (
       podcast_index_id: feed.channel.podcast_index_id
     };
 
-    await rabbitMQService.sendMessage(config.queueName, message);
+    await activeMQArtemisService.sendMessage(config.queueName, message);
   }
 };

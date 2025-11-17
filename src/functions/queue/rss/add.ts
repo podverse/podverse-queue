@@ -1,4 +1,4 @@
-import { QueueName, RabbitMQService } from "@queue/services/rabbitmq";
+import { QueueName, ActiveMQArtemisService } from "@queue/services/activeMQArtemis";
 
 type QueueRSSAddOptions = {
   queueName: QueueName;
@@ -7,15 +7,15 @@ type QueueRSSAddOptions = {
 }
 
 export const queueRSSAdd = async (
-  rabbitMQService: RabbitMQService,
+  activeMQArtemisService: ActiveMQArtemisService,
   options: QueueRSSAddOptions
 ) => {
-  await rabbitMQService.initialize();
+  await activeMQArtemisService.initialize();
 
   const message = {
     url: options.feedUrl,
     podcast_index_id: options.podcastIndexId
   };
 
-  await rabbitMQService.sendMessage(options.queueName, message);
+  await activeMQArtemisService.sendMessage(options.queueName, message);
 };

@@ -1,5 +1,5 @@
 import { FeedService } from 'podverse-orm';
-import { QueueName, RabbitMQService } from "@queue/services/rabbitmq";
+import { QueueName, ActiveMQArtemisService } from "@queue/services/activeMQArtemis";
 import { PodcastIndexService } from 'podverse-external-services';
 
 type QueueRSSAddAllRecentlyUpdatedFeedsOptions = {
@@ -8,14 +8,14 @@ type QueueRSSAddAllRecentlyUpdatedFeedsOptions = {
 }
 
 export const queueRSSAddRecentlyUpdatedFeedsFromPodcastIndex = async (
-  rabbitMQService: RabbitMQService,
+  activeMQArtemisService: ActiveMQArtemisService,
   podcastIndexService: PodcastIndexService,
   options: QueueRSSAddAllRecentlyUpdatedFeedsOptions
 ) => {
   const sinceRange = options.sinceRange;
   const recentlyUpdatedFeeds = await podcastIndexService.recentGetData(sinceRange);
   
-  await rabbitMQService.initialize();
+  await activeMQArtemisService.initialize();
 
   for (const feed of recentlyUpdatedFeeds) {
     const feedService = new FeedService();
@@ -28,7 +28,7 @@ export const queueRSSAddRecentlyUpdatedFeedsFromPodcastIndex = async (
         podcast_index_id: feed.feedId
       };
   
-      await rabbitMQService.sendMessage(options.queueName, message);
+      await activeMQArtemisService.sendMessage(options.queueName, message);
     }
   }
 };

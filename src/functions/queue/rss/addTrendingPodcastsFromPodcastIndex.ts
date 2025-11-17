@@ -1,5 +1,5 @@
 import { PodcastIndexService } from 'podverse-external-services';
-import { QueueName, RabbitMQService } from '@queue/services/rabbitmq';
+import { QueueName, ActiveMQArtemisService } from '@queue/services/activeMQArtemis';
 
 type AddTrendingPodcastsOptions = {
   queueName: QueueName;
@@ -7,7 +7,7 @@ type AddTrendingPodcastsOptions = {
 };
 
 export const queueRSSAddTrendingPodcastsFromPodcastIndex = async (
-  rabbitMQService: RabbitMQService,
+  activeMQArtemisService: ActiveMQArtemisService,
   podcastIndexService: PodcastIndexService,
   options: AddTrendingPodcastsOptions
 ): Promise<void> => {
@@ -16,7 +16,7 @@ export const queueRSSAddTrendingPodcastsFromPodcastIndex = async (
   try {
     const { feeds } = await podcastIndexService.trendingGetPodcasts(maxFeeds);
 
-    await rabbitMQService.initialize();
+    await activeMQArtemisService.initialize();
 
     for (const feed of feeds) {
       const message = {
@@ -24,7 +24,7 @@ export const queueRSSAddTrendingPodcastsFromPodcastIndex = async (
         podcast_index_id: feed.id
       };
       
-      await rabbitMQService.sendMessage(queueName, message);
+      await activeMQArtemisService.sendMessage(queueName, message);
     }
   } catch (error) {
     console.error('[queueRSSAddTrendingPodcastsFromPodcastIndex] Error adding trending podcasts:', error);
