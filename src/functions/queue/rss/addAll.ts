@@ -3,11 +3,11 @@ import { ActiveMQArtemisService } from "@queue/services/activeMQArtemis";
 import { MQFeedMessage } from "@queue/types/mq";
 import { MQQueueConfig } from "podverse-helpers";
 
-type QueueRSSAddAllConfig = MQQueueConfig;
+type MQRSSAddAllConfig = MQQueueConfig;
 
-export const queueRSSAddAll = async (
+export const mqRSSAddAll = async (
   activeMQArtemisService: ActiveMQArtemisService,
-  config: QueueRSSAddAllConfig
+  config: MQRSSAddAllConfig
 ) => {
   const feedService = new FeedService();  
   const feeds = await feedService.getAll();

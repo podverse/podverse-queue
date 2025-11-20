@@ -1,4 +1,4 @@
-name: Publish Alpha podverse-queue
+name: Publish Alpha podverse-mq
 
 on:
   push:

@@ -6,12 +6,12 @@ import crypto from 'crypto';
 // Public types maintained for backwards compatibility
 export type MQQueueName = 'rss-normal' |  'rss-on-demand' | 'rss-live';
 
-type QueueRSSMessage = {
+type MQRSSMessage = {
   url: string;
   podcast_index_id: number | null;
 };
 
-type Message = QueueRSSMessage;
+type Message = MQRSSMessage;
 
 type SendMessageParams = {
   queueName: MQQueueName

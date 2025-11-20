@@ -2,14 +2,14 @@ import { ActiveMQArtemisService } from "@queue/services/activeMQArtemis";
 import { MQFeedMessage } from "@queue/types/mq";
 import { MQQueueConfig } from "podverse-helpers";
 
-type QueueRSSAddOptions = MQQueueConfig & {
+type MQRSSAddOptions = MQQueueConfig & {
   feedUrl: string;
   podcastIndexId: number;
 }
 
-export const queueRSSAdd = async (
+export const mqRSSAdd = async (
   activeMQArtemisService: ActiveMQArtemisService,
-  options: QueueRSSAddOptions
+  options: MQRSSAddOptions
 ) => {
   await activeMQArtemisService.initialize();
 

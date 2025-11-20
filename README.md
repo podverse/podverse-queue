@@ -1,4 +1,4 @@
-# podverse-queue
+# podverse-mq
 
 A module for handling Podverse Queue (ActiveMQArtemis / AMQP) interactions.
 
@@ -6,7 +6,7 @@ A module for handling Podverse Queue (ActiveMQArtemis / AMQP) interactions.
 
 ### Environment Variables
 
-The environment variables for this module must be set within the app that consumes this module (ex. `podverse-api` or `podverse-workers`). See `podverse-queue/config/index.ts` for a list of the env vars expected.
+The environment variables for this module must be set within the app that consumes this module (ex. `podverse-api` or `podverse-workers`). See `podverse-mq/config/index.ts` for a list of the env vars expected.
 
 ### Local Dev Workflow
 

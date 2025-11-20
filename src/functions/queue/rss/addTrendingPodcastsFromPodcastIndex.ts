@@ -7,7 +7,7 @@ type AddTrendingPodcastsOptions = MQQueueConfig & {
   maxFeeds?: number;
 };
 
-export const queueRSSAddTrendingPodcastsFromPodcastIndex = async (
+export const mqRSSAddTrendingPodcastsFromPodcastIndex = async (
   activeMQArtemisService: ActiveMQArtemisService,
   podcastIndexService: PodcastIndexService,
   options: AddTrendingPodcastsOptions
@@ -33,7 +33,7 @@ export const queueRSSAddTrendingPodcastsFromPodcastIndex = async (
       });
     }
   } catch (error) {
-    console.error('[queueRSSAddTrendingPodcastsFromPodcastIndex] Error adding trending podcasts:', error);
+    console.error('[mqRSSAddTrendingPodcastsFromPodcastIndex] Error adding trending podcasts:', error);
     throw error;
   }
 };

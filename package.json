@@ -1,5 +1,5 @@
 {
-  "name": "podverse-queue",
+  "name": "podverse-mq",
   "version": "5.1.3-develop",
   "description": "",
   "main": "dist/index.js",
