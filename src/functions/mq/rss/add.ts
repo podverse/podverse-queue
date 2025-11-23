@@ -4,7 +4,7 @@ import { MQQueueConfig } from "podverse-helpers";
 
 type MQRSSAddOptions = MQQueueConfig & {
   feedUrl: string;
-  podcastIndexId: number;
+  podcast_index_id: number;
 }
 
 export const mqRSSAdd = async (
@@ -15,7 +15,7 @@ export const mqRSSAdd = async (
 
   const message: MQFeedMessage = {
     url: options.feedUrl,
-    podcast_index_id: options.podcastIndexId
+    podcast_index_id: options.podcast_index_id
   };
 
   await activeMQArtemisService.sendMessage({
