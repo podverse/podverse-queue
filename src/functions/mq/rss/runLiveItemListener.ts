@@ -69,8 +69,8 @@ export const mqRSSRunLiveItemListener = (
                       } catch (error) {
                         console.info(`p.p.iris error ${error}, connectionId: ${connectionId}`);                        
                       }
-                      if (feed?.channel) {
-                        const { podcast_index_id } = feed.channel;
+                      if (feed) {
+                        const { podcast_index_id } = feed;
                         const numPodcastIndexId = Number(podcast_index_id);
                         if (podcast_index_id) addRSSObjs.push({ url, podcast_index_id: numPodcastIndexId });
                       } else {

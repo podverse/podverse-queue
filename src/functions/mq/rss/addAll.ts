@@ -17,7 +17,7 @@ export const mqRSSAddAll = async (
   for (const feed of feeds) {
     const message: MQFeedMessage = {
       url: feed.url,
-      podcast_index_id: feed.channel.podcast_index_id
+      podcast_index_id: feed.podcast_index_id
     };
 
     await activeMQArtemisService.sendMessage({
