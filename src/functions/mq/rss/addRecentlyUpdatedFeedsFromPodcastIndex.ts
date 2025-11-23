@@ -20,7 +20,8 @@ export const mqRSSAddRecentlyUpdatedFeedsFromPodcastIndex = async (
 
   for (const feed of recentlyUpdatedFeeds) {
     const feedService = new FeedService();
-    const dbFeed = await feedService.getByPodcastIndexId({ podcast_index_id: feed.feedId });
+    const podcast_index_id = feed.feedId;
+    const dbFeed = await feedService.getByPodcastIndexId(podcast_index_id);
     const shouldAddToQueue = !!dbFeed;
 
     if (shouldAddToQueue) {
