@@ -65,7 +65,7 @@ export const mqRSSRunLiveItemListener = (
                     if (url?.startsWith('http')) {
                       let feed: Feed | null = null;
                       try {
-                        feed = await feedService.getByUrl(url);
+                        feed = await feedService.getByUrl({ url });
                       } catch (error) {
                         console.info(`p.p.iris error ${error}, connectionId: ${connectionId}`);                        
                       }
