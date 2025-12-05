@@ -6,7 +6,7 @@ import { mqRSSAdd } from './add';
 
 export const mqRSSRunLiveItemListener = (
   activeMQArtemisService: ActiveMQArtemisService) => {
-  console.info('starting runLiveItemListener');
+  console.info('starting runLiveItemListener v2');
 
   const feedService = new FeedService();
 
