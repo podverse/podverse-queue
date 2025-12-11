@@ -122,7 +122,7 @@ export class ActiveMQArtemisService { // Name preserved
   private async ensureReceiver(queueName: MQQueueName): Promise<Receiver> {
     if (this.receivers.has(queueName)) return this.receivers.get(queueName)!;
     if (!this.connection) await this.connect();
-    const receiver = this.connection!.open_receiver({ source: { address: queueName }, credit_window: 0 });
+    const receiver = this.connection!.open_receiver({ source: { address: queueName }, credit_window: 10 });
     return new Promise((resolve) => {
       receiver.on('receiver_open', () => {
         this.logger.info(`Receiver ready for queue ${queueName}`);
@@ -214,7 +214,8 @@ export class ActiveMQArtemisService { // Name preserved
   async consumeMessages(queueName: MQQueueName, processMessage: (msg: { content: Buffer; raw: Delivery; queue: MQQueueName }) => Promise<void> | void) {
     try {
       const receiver = await this.ensureReceiver(queueName);
-      const handleMessage = async (context: EventContext) => {
+
+      receiver.on('message', async (context: EventContext) => {
         if (context.receiver !== receiver) return;
         try {
           const body = context.message?.body as string;
@@ -225,14 +226,11 @@ export class ActiveMQArtemisService { // Name preserved
           delivery.accept();
         } catch (err) {
           this.logger.logError('Error processing message', err as Error);
+          // It's important to still settle the message, otherwise it might be redelivered
           context.delivery?.reject();
-        } finally {
-          // Request next message (one at a time for FIFO semantics)
-          receiver.add_credit(1);
         }
-      };
-      receiver.on('message', handleMessage);
-      receiver.add_credit(1); // Start consumption
+      });
+
       this.logger.info(`Consumer is set up for queue ${queueName}`);
     } catch (error) {
       this.logger.logError('consumeMessages: Failed to set consumer', error as Error);
