@@ -3,6 +3,7 @@ import { MQQueueConfig } from 'podverse-helpers';
 import { FeedService } from 'podverse-orm';
 import { ActiveMQArtemisService } from "@queue/services/activeMQArtemis";
 import { MQFeedMessage } from '@queue/types/mq';
+import { ParseRSSFeedAndSaveToDatabase } from 'podverse-parser';
 
 type MQRSSAddAllRecentlyUpdatedFeedsOptions = MQQueueConfig & {
   sinceRange: number;
@@ -11,7 +12,8 @@ type MQRSSAddAllRecentlyUpdatedFeedsOptions = MQQueueConfig & {
 export const mqRSSAddRecentlyUpdatedFeedsFromPodcastIndex = async (
   activeMQArtemisService: ActiveMQArtemisService,
   podcastIndexService: PodcastIndexService,
-  options: MQRSSAddAllRecentlyUpdatedFeedsOptions
+  options: MQRSSAddAllRecentlyUpdatedFeedsOptions,
+  msgOptions: ParseRSSFeedAndSaveToDatabase
 ) => {
   const sinceRange = options.sinceRange;
   const recentlyUpdatedFeeds = await podcastIndexService.recentGetData(sinceRange);
@@ -27,7 +29,8 @@ export const mqRSSAddRecentlyUpdatedFeedsFromPodcastIndex = async (
     if (shouldAddToQueue) {
       const message: MQFeedMessage = {
         url: feed.feedUrl,
-        podcast_index_id: feed.feedId
+        podcast_index_id: feed.feedId,
+        options: msgOptions
       };
   
       await activeMQArtemisService.sendMessage({

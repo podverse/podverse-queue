@@ -1,6 +1,7 @@
 import { ActiveMQArtemisService } from "@queue/services/activeMQArtemis";
 import { MQFeedMessage } from "@queue/types/mq";
 import { MQQueueConfig } from "podverse-helpers";
+import { ParseRSSFeedAndSaveToDatabase } from "podverse-parser";
 
 type MQRSSAddOptions = MQQueueConfig & {
   feedUrl: string;
@@ -9,13 +10,15 @@ type MQRSSAddOptions = MQQueueConfig & {
 
 export const mqRSSAdd = async (
   activeMQArtemisService: ActiveMQArtemisService,
-  options: MQRSSAddOptions
+  options: MQRSSAddOptions,
+  msgOptions: ParseRSSFeedAndSaveToDatabase
 ) => {
   await activeMQArtemisService.initialize();
 
   const message: MQFeedMessage = {
     url: options.feedUrl,
-    podcast_index_id: options.podcast_index_id
+    podcast_index_id: options.podcast_index_id,
+    options: msgOptions
   };
 
   await activeMQArtemisService.sendMessage({

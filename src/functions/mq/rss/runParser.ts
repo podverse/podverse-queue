@@ -12,9 +12,9 @@ export const mqRSSRunParser = async (
       const bodyStr = (context.message?.body as string) ?? '';
       const receivedMessage = JSON.parse(bodyStr);
 
-      const { url, podcast_index_id } = receivedMessage;
+      const { url, podcast_index_id, options } = receivedMessage;
       if (url || podcast_index_id) {
-        await parseRSSFeedAndSaveToDatabase(url, podcast_index_id);
+        await parseRSSFeedAndSaveToDatabase(url, podcast_index_id, options);
         context.delivery?.accept();
       } else {
         throw new Error(`mqRSSRunParser: url or podcast_index_id not found in message ${bodyStr}`);
