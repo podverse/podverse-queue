@@ -1,8 +1,6 @@
 import { parseRSSFeedAndSaveToDatabase } from "podverse-parser";
 import { MQQueueName, ActiveMQArtemisService } from "@queue/services/activeMQArtemis";
 
-let isProcessing = false;
-
 export const mqRSSRunParser = async (
   activeMQArtemisService: ActiveMQArtemisService,
   queueName: MQQueueName
@@ -10,14 +8,6 @@ export const mqRSSRunParser = async (
   await activeMQArtemisService.initialize();
 
   await activeMQArtemisService.consumeMessages(queueName, async (context) => {
-    // Don't accept new messages if we're shutting down
-    if (activeMQArtemisService.getIsShuttingDown()) {
-      console.log('Shutting down - rejecting new message to requeue it');
-      context.delivery?.release();
-      return;
-    }
-
-    isProcessing = true;
     try {
       const bodyStr = (context.message?.body as string) ?? '';
       const receivedMessage = JSON.parse(bodyStr);
@@ -35,10 +25,6 @@ export const mqRSSRunParser = async (
         condition: 'podverse:processing-error',
         description: (error as Error).message,
       });
-    } finally {
-      isProcessing = false;
     }
   });
 };
-
-export const getIsProcessing = () => isProcessing;
