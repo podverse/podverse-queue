@@ -1,10 +1,15 @@
 import rhea from 'rhea';
-import { Connection, Sender, Receiver, EventContext, Delivery } from 'rhea';
+import { Connection, Sender, Receiver, EventContext } from 'rhea';
 import { LoggerService } from 'podverse-helpers/dist/lib/backend/logger';
 import crypto from 'crypto';
 
 // Public types maintained for backwards compatibility
-export type MQQueueName = 'rss-normal' |  'rss-on-demand' | 'rss-live';
+export type MQQueueName =
+  | 'rss-normal'
+  | 'rss-on-demand'
+  | 'rss-live'
+  | 'DLQ'
+  | `DLQ.${'rss-normal' | 'rss-on-demand' | 'rss-live'}`;
 
 type MQRSSMessage = {
   url: string;
@@ -181,53 +186,84 @@ export class ActiveMQArtemisService { // Name preserved
     }
   }
 
-  async getMessage(queueName: MQQueueName): Promise<Message | null> {
+  /**
+   * Send a sample message directly to the Dead Letter Address for the given queue.
+   * Useful for debugging DLQ consumers without needing to trigger failures.
+   * The DLQ queues are bound to addresses of the form `DLQ.<queueName>`.
+   */
+  async sendSampleToDLQ(
+    queueName: MQQueueName,
+    sample: Record<string, unknown>,
+    failureDescription = 'Sample DLQ message for debugging'
+  ): Promise<void> {
     try {
-      const receiver = await this.ensureReceiver(queueName as MQQueueName);
-      // Request one message (credit 1)
-      receiver.add_credit(1);
-      return await new Promise<Message | null>((resolve) => {
-        const onMessage = (context: EventContext) => {
-          if (context.receiver === receiver) {
-            const body = context.message?.body as string;
-            const parsed: Message = JSON.parse(body);
-            this.logger.info(`Message received from queue ${queueName}: ${body}`);
-            context.delivery?.accept();
-            receiver.removeListener('message', onMessage);
-            resolve(parsed);
+      if (!this.connection) await this.connect();
+
+      // Choose target based on what exists in your broker
+      const dlqTargets: MQQueueName[] = ['DLQ', `DLQ.${queueName}` as MQQueueName];
+
+      for (const dlqQueue of dlqTargets) {
+        const sender = this.connection!.open_sender({ target: { address: dlqQueue } });
+        await new Promise<void>((resolve) => sender.once('sender_open', () => resolve()));
+
+        const payload = { ...sample };
+        const bodyString = JSON.stringify(payload);
+        const delivery = sender.send({
+          body: bodyString,
+          durable: true,
+          content_type: 'application/json',
+          application_properties: {
+            _AMQ_DLQ_DELIVERY_FAILURE_CAUSE: failureDescription,
+            'x-opt-delivery-failure-cause': failureDescription
           }
-        };
-        const onNoMessageTimeout = () => {
-          receiver.removeListener('message', onMessage);
-          resolve(null);
-        };
-        receiver.on('message', onMessage);
-        // Timeout after 1 second if none
-        setTimeout(onNoMessageTimeout, 1000);
-      });
+        });
+
+        await new Promise<void>((resolve, reject) => {
+          const onAccepted = (context: EventContext) => {
+            if (context.delivery === delivery) {
+              this.logger.info(`DLQ sample sent to ${dlqQueue}`);
+              cleanup();
+              resolve();
+            }
+          };
+          const onRejected = (context: EventContext) => {
+            if (context.delivery === delivery) {
+              const err = new Error(`DLQ sample send was rejected for ${dlqQueue}`);
+              this.logger.logError('sendSampleToDLQ: rejected', err);
+              cleanup();
+              reject(err);
+            }
+          };
+          const cleanup = () => {
+            sender.removeListener('accepted', onAccepted);
+            sender.removeListener('rejected', onRejected);
+          };
+          sender.on('accepted', onAccepted);
+          sender.on('rejected', onRejected);
+        });
+      }
     } catch (error) {
-      this.logger.logError('getMessage: Error receiving message', error as Error);
-      return null;
+      this.logger.logError('sendSampleToDLQ: Error sending sample to DLQ', error as Error);
     }
   }
 
-  async consumeMessages(queueName: MQQueueName, processMessage: (msg: { content: Buffer; raw: Delivery; queue: MQQueueName }) => Promise<void> | void) {
+  async consumeMessages(queueName: MQQueueName, processMessage: (context: EventContext) => Promise<void> | void) {
     try {
       const receiver = await this.ensureReceiver(queueName);
 
       receiver.on('message', async (context: EventContext) => {
         if (context.receiver !== receiver) return;
         try {
-          const body = context.message?.body as string;
-          this.logger.info(`Received message from queue ${queueName}: ${body}`);
-          const delivery = context.delivery!;
-          const buffer = Buffer.from(body);
-          await processMessage({ content: buffer, raw: delivery, queue: queueName });
-          delivery.accept();
+          // The processing function is now responsible for accepting/rejecting.
+          await processMessage(context);
         } catch (err) {
-          this.logger.logError('Error processing message', err as Error);
-          // It's important to still settle the message, otherwise it might be redelivered
-          context.delivery?.reject();
+          const error = err as Error;
+          this.logger.logError('Error processing message', error);
+          // If the processor throws, reject the message as a fallback.
+          context.delivery?.reject({
+            condition: 'podverse:processing-error',
+            description: error.message
+          });
         }
       });
 
@@ -236,4 +272,5 @@ export class ActiveMQArtemisService { // Name preserved
       this.logger.logError('consumeMessages: Failed to set consumer', error as Error);
     }
   }
+  
 }
