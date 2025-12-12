@@ -3,12 +3,10 @@ import { Connection, Sender, Receiver, EventContext } from 'rhea';
 import { LoggerService } from 'podverse-helpers/dist/lib/backend/logger';
 import crypto from 'crypto';
 
-// Public types maintained for backwards compatibility
 export type MQQueueName =
   | 'rss-normal'
   | 'rss-on-demand'
   | 'rss-live'
-  | 'DLQ'
   | `DLQ.${'rss-normal' | 'rss-on-demand' | 'rss-live'}`;
 
 type MQRSSMessage = {
@@ -200,7 +198,7 @@ export class ActiveMQArtemisService { // Name preserved
       if (!this.connection) await this.connect();
 
       // Choose target based on what exists in your broker
-      const dlqTargets: MQQueueName[] = ['DLQ', `DLQ.${queueName}` as MQQueueName];
+      const dlqTargets: MQQueueName[] = [`DLQ.${queueName}` as MQQueueName];
 
       for (const dlqQueue of dlqTargets) {
         const sender = this.connection!.open_sender({ target: { address: dlqQueue } });
