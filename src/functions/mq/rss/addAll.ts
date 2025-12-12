@@ -7,7 +7,7 @@ type MQRSSAddAllConfig = MQQueueConfig;
 
 export const mqRSSAddAll = async (
   activeMQArtemisService: ActiveMQArtemisService,
-  config: MQRSSAddAllConfig
+  options: MQRSSAddAllConfig
 ) => {
   const feedService = new FeedService();  
   const feeds = await feedService.getAll();
@@ -21,10 +21,10 @@ export const mqRSSAddAll = async (
     };
 
     await activeMQArtemisService.sendMessage({
-      queueName: config.queueName,
+      queueName: options.queueName,
       message,
-      priority: config.priority,
-      dedupeCacheTimeMS: config.dedupeCacheTimeMS
+      priority: options.priority,
+      dedupeCacheTimeMS: options.dedupeCacheTimeMS
     });
   }
 };
