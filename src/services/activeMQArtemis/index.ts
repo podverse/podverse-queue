@@ -126,11 +126,12 @@ export class ActiveMQArtemisService { // Name preserved
   private async ensureReceiver(queueName: MQQueueName): Promise<Receiver> {
     if (this.receivers.has(queueName)) return this.receivers.get(queueName)!;
     if (!this.connection) await this.connect();
-    const receiver = this.connection!.open_receiver({ source: { address: queueName }, credit_window: 10 });
+    const receiver = this.connection!.open_receiver({ source: { address: queueName }, credit_window: 0 });
     return new Promise((resolve) => {
       receiver.on('receiver_open', () => {
         this.logger.info(`Receiver ready for queue ${queueName}`);
         this.receivers.set(queueName, receiver);
+        receiver.add_credit(1);
         resolve(receiver);
       });
     });
@@ -263,6 +264,8 @@ export class ActiveMQArtemisService { // Name preserved
             condition: 'podverse:processing-error',
             description: error.message
           });
+        } finally {
+          receiver.add_credit(1);
         }
       });
 
