@@ -38,6 +38,7 @@ export class ActiveMQArtemisService { // Name preserved
   private params: ActiveMQArtemisServiceParams;
   private logger: LoggerService;
   private connecting = false;
+  private isShuttingDown = false;
 
   constructor(params: ActiveMQArtemisServiceParams, logger: LoggerService) {
     this.params = params;
@@ -268,6 +269,48 @@ export class ActiveMQArtemisService { // Name preserved
       this.logger.info(`Consumer is set up for queue ${queueName}`);
     } catch (error) {
       this.logger.logError('consumeMessages: Failed to set consumer', error as Error);
+    }
+  }
+
+  getIsShuttingDown(): boolean {
+    return this.isShuttingDown;
+  }
+
+  async close(): Promise<void> {
+    this.isShuttingDown = true;
+    this.logger.info('Closing ActiveMQ Artemis connection...');
+    
+    // Close all receivers first to stop accepting new messages
+    for (const [queueName, receiver] of this.receivers.entries()) {
+      try {
+        receiver.close();
+        this.logger.info(`Closed receiver for queue ${queueName}`);
+      } catch (error) {
+        this.logger.logError(`Error closing receiver for ${queueName}`, error as Error);
+      }
+    }
+    this.receivers.clear();
+
+    // Close all senders
+    for (const [queueName, sender] of this.senders.entries()) {
+      try {
+        sender.close();
+        this.logger.info(`Closed sender for queue ${queueName}`);
+      } catch (error) {
+        this.logger.logError(`Error closing sender for ${queueName}`, error as Error);
+      }
+    }
+    this.senders.clear();
+
+    // Close the connection
+    if (this.connection) {
+      try {
+        this.connection.close();
+        this.logger.info('Closed ActiveMQ Artemis connection');
+      } catch (error) {
+        this.logger.logError('Error closing connection', error as Error);
+      }
+      this.connection = null;
     }
   }
   
