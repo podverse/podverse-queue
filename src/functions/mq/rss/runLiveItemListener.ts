@@ -93,7 +93,15 @@ export const mqRSSRunLiveItemListener = (
                       feedUrl: addRSSObj.url,
                       podcast_index_id: addRSSObj.podcast_index_id
                     },
-                    { forceParse: true }
+                    {
+                      forceParse: true,
+                      accountId: null,
+                      onDemandParserEvent: {
+                        accountId: null,
+                        remoteParentPodcastIndexId: null,
+                        type: null,
+                      }
+                    }
                   );
                 }
               }

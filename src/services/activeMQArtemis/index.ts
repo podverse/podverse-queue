@@ -2,6 +2,7 @@ import rhea from 'rhea';
 import { Connection, Sender, Receiver, EventContext } from 'rhea';
 import { LoggerService } from 'podverse-helpers/dist/lib/backend/logger';
 import crypto from 'crypto';
+import { ParseRSSFeedAndSaveToDatabaseOptions } from 'podverse-parser/dist/lib/rss/parser';
 
 export type MQQueueName =
   | 'rss-normal'
@@ -12,6 +13,7 @@ export type MQQueueName =
 type MQRSSMessage = {
   url: string;
   podcast_index_id: number | null;
+  options: ParseRSSFeedAndSaveToDatabaseOptions;
 };
 
 type Message = MQRSSMessage;
@@ -139,7 +141,7 @@ export class ActiveMQArtemisService { // Name preserved
 
   private computeDuplicateId(queueName: MQQueueName, message: Message, dedupeCacheTimeMS: number | null): string | null {
     if (!dedupeCacheTimeMS || dedupeCacheTimeMS <= 0) return null;
-    const baseHash = crypto.createHash('sha256').update(JSON.stringify(message)).digest('hex');
+    const baseHash = crypto.createHash('sha256').update(JSON.stringify(message.podcast_index_id)).digest('hex');
     const now = Date.now();
     const bucketStart = Math.floor(now / dedupeCacheTimeMS) * dedupeCacheTimeMS;
     return `${queueName}:${bucketStart}:${baseHash}`;
