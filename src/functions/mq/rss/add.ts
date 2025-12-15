@@ -1,7 +1,7 @@
 import { ActiveMQArtemisService } from "@queue/services/activeMQArtemis";
 import { MQFeedMessage } from "@queue/types/mq";
 import { MQQueueConfig } from "podverse-helpers";
-import { ParseRSSFeedAndSaveToDatabase } from "podverse-parser";
+import { ParseRSSFeedAndSaveToDatabaseOptions } from "podverse-parser";
 
 type MQRSSAddOptions = MQQueueConfig & {
   feedUrl: string;
@@ -11,7 +11,7 @@ type MQRSSAddOptions = MQQueueConfig & {
 export const mqRSSAdd = async (
   activeMQArtemisService: ActiveMQArtemisService,
   options: MQRSSAddOptions,
-  msgOptions: ParseRSSFeedAndSaveToDatabase
+  msgOptions: ParseRSSFeedAndSaveToDatabaseOptions
 ) => {
   await activeMQArtemisService.initialize();
 

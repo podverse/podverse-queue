@@ -1,7 +1,7 @@
-import { ParseRSSFeedAndSaveToDatabase } from "podverse-parser";
+import { ParseRSSFeedAndSaveToDatabaseOptions } from "podverse-parser";
 
 export type MQFeedMessage = {
   url: string;
   podcast_index_id: number;
-  options: ParseRSSFeedAndSaveToDatabase;
+  options: ParseRSSFeedAndSaveToDatabaseOptions;
 }

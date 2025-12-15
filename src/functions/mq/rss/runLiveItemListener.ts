@@ -95,7 +95,6 @@ export const mqRSSRunLiveItemListener = (
                     },
                     {
                       forceParse: true,
-                      accountId: null,
                       onDemandParserEvent: {
                         accountId: null,
                         remoteParentPodcastIndexId: null,
