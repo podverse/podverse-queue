@@ -42,6 +42,12 @@ export class ActiveMQArtemisService { // Name preserved
   private logger: LoggerService;
   private connecting = false;
   private isShuttingDown = false;
+  private readonly tcpKeepAliveMs: number = 30000;
+  private readonly idleTimeOutMs: number = 60000;
+  private keepAliveApplied = false;
+  private readonly enableAmqpPing: boolean = (process.env.ARTEMIS_DISABLE_AMQP_PING !== '1');
+  private heartbeatSender: Sender | null = null;
+  private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(params: ActiveMQArtemisServiceParams, logger: LoggerService) {
     this.params = params;
@@ -81,7 +87,7 @@ export class ActiveMQArtemisService { // Name preserved
           this.connecting = false; // allow retry attempts later
           return reject(err);
         }
-        const idleTimeOut = 30000;
+        const idleTimeOut = this.idleTimeOutMs;
         const baseId = process.env.CONTAINER_ID
           || process.env.HOSTNAME
           || `podverse-mq-${crypto.randomBytes(4).toString('hex')}`;
@@ -100,10 +106,79 @@ export class ActiveMQArtemisService { // Name preserved
           reconnect_limit: -1
         }) as Connection;
 
-        connection.on('connection_open', () => {
+        connection.on('connection_open', (context?: EventContext) => {
           this.logger.info('Artemis AMQP connection established');
+          try {
+            // Log negotiated connection properties to help debug heartbeat/idle settings
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const connAny = context && (context.connection as any);
+            const local = connAny && connAny.options ? connAny.options : undefined;
+            const remote = connAny && connAny.remote ? connAny.remote : undefined;
+            this.logger.info('Artemis connection negotiation', { local, remote });
+          } catch (err) {
+            this.logger.logError('Failed to log negotiated connection properties', err as Error);
+          }
           this.connection = connection;
           this.connecting = false;
+
+          // Best-effort: enable Node TCP keepalive on the underlying socket so
+          // the OS detects dead peers even if AMQP-level heartbeats are missed.
+          try {
+            // rhea internal socket location varies between versions; probe common places.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const connAny = connection as unknown as Record<string, any>;
+            const sock =
+              connAny.socket ||
+              connAny._socket ||
+              (connAny.transport && (connAny.transport.socket || connAny.transport._socket));
+            if (sock && typeof sock.setKeepAlive === 'function') {
+              if (!this.keepAliveApplied) {
+                sock.setKeepAlive(true, this.tcpKeepAliveMs);
+                this.keepAliveApplied = true;
+                this.logger.info(`Enabled TCP keepalive on Artemis socket (${this.tcpKeepAliveMs}ms)`);
+              } else {
+                this.logger.info('TCP keepalive already applied to Artemis socket');
+              }
+              // Start optional AMQP-level pings if enabled
+              if (this.enableAmqpPing) {
+                try {
+                  const hbSender = connection.open_sender({ target: { address: 'podverse.keepalive' } });
+                  hbSender.on('sender_open', () => {
+                    this.heartbeatSender = hbSender;
+                    if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+                    const heartbeatMs = Number(process.env.ARTEMIS_AMQP_PING_MS ?? Math.max(1000, Math.floor(this.idleTimeOutMs / 2)));
+                    this.logger.info('AMQP heartbeat interval (ms)', { heartbeatMs });
+                    this.heartbeatInterval = setInterval(() => {
+                      try {
+                        if (this.heartbeatSender) {
+                          this.heartbeatSender.send({ body: `ping:${Date.now()}` });
+                        }
+                      } catch (err) {
+                        this.logger.logError('AMQP keepalive ping failed', err as Error);
+                      }
+                    }, heartbeatMs);
+                  });
+                  hbSender.on('sender_error', (ctx) => {
+                    this.logger.logError('AMQP heartbeat sender_error', (ctx && (ctx.error || ctx)) as Error);
+                  });
+                  hbSender.on('sender_close', () => {
+                    if (this.heartbeatInterval) {
+                      clearInterval(this.heartbeatInterval);
+                      this.heartbeatInterval = null;
+                    }
+                    this.heartbeatSender = null;
+                  });
+                } catch (err) {
+                  this.logger.logError('Failed to start optional AMQP heartbeat sender', err as Error);
+                }
+              }
+            } else {
+              this.logger.info('Could not find underlying socket to enable TCP keepalive (non-fatal)');
+            }
+          } catch (err) {
+            this.logger.logError('Failed to enable TCP keepalive on Artemis socket', err as Error);
+          }
+
           resolve();
         });
 
@@ -111,9 +186,35 @@ export class ActiveMQArtemisService { // Name preserved
           this.logger.logError('Artemis connection error', context.error as Error);
         });
 
-        connection.on('disconnected', () => {
-          this.logger.info('Artemis connection disconnected – will attempt reconnect');
+        connection.on('disconnected', (context?: EventContext) => {
+          // Provide the disconnect reason if available — this helps determine whether
+          // the broker closed the AMQP link due to AMQP-level idle timeout or network issues.
+          try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const reason = (context && (context.error || (context as any).disconnect_reason)) || undefined;
+            this.logger.info('Artemis connection disconnected – will attempt reconnect', { reason });
+          } catch {
+            this.logger.info('Artemis connection disconnected – will attempt reconnect');
+          }
           this.connection = null;
+          // keepAliveApplied resets so it can be re-applied on next open
+          this.keepAliveApplied = false;
+          if (this.enableAmqpPing) {
+            if (this.heartbeatInterval) {
+              clearInterval(this.heartbeatInterval);
+              this.heartbeatInterval = null;
+            }
+            try {
+              if (this.heartbeatSender) {
+                try { this.heartbeatSender.close(); } catch {
+                  // swallow
+                }
+                this.heartbeatSender = null;
+              }
+            } catch (err) {
+              this.logger.logError('Error closing heartbeatSender on disconnect', err as Error);
+            }
+          }
         });
       } catch (err) {
         this.logger.logError('Artemis connect threw synchronously', err as Error);
@@ -356,6 +457,24 @@ export class ActiveMQArtemisService { // Name preserved
           this.logger.logError('Error closing connection', error as Error);
         }
         this.connection = null;
+        // reset keepalive flag
+        this.keepAliveApplied = false;
+        if (this.enableAmqpPing) {
+          if (this.heartbeatInterval) {
+            clearInterval(this.heartbeatInterval);
+            this.heartbeatInterval = null;
+          }
+          try {
+            if (this.heartbeatSender) {
+              try { this.heartbeatSender.close(); } catch {
+                // swallow
+              }
+              this.heartbeatSender = null;
+            }
+          } catch (err) {
+            this.logger.logError('Error closing heartbeatSender on close', err as Error);
+          }
+        }
       }
     };
 
