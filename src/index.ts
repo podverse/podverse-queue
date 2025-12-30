@@ -8,3 +8,4 @@ export { mqRSSRunParser } from './functions/mq/rss/runParser';
 export { mqRSSRunLiveItemListener } from './functions/mq/rss/runLiveItemListener';
   
 export { ActiveMQArtemisService, ActiveMQArtemisServiceParams } from './services/activeMQArtemis';
+export { createActiveMQShutdown } from './services/activeMQArtemis/shutdown';
