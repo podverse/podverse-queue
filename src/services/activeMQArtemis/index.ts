@@ -2,6 +2,7 @@ import rhea from 'rhea';
 import { Connection, Sender, Receiver, EventContext } from 'rhea';
 import { LoggerService } from 'podverse-helpers/dist/lib/backend/logger';
 import crypto from 'crypto';
+import { getContainerIpPart } from 'podverse-helpers/dist/lib/backend/os';
 import { ParseRSSFeedAndSaveToDatabaseOptions } from 'podverse-parser/dist/lib/rss/parser';
 
 export type MQQueueName =
@@ -80,11 +81,21 @@ export class ActiveMQArtemisService { // Name preserved
           this.connecting = false; // allow retry attempts later
           return reject(err);
         }
+        const idleTimeOut = 30000;
+        const baseId = process.env.CONTAINER_ID
+          || process.env.HOSTNAME
+          || `podverse-mq-${crypto.randomBytes(4).toString('hex')}`;
+        const containerId = `${baseId}${getContainerIpPart()}`;
+
         const connection = rheaLike.connect!({
           host: this.params.host,
           port: this.params.port,
           username: this.params.username,
           password: this.params.password,
+          // send AMQP heartbeats so broker (default 60s TTL) sees activity and stays alive until manually closed
+          idle_time_out: idleTimeOut,
+          container_id: containerId,
+          properties: { product: 'podverse-mq' },
           reconnect: true,
           reconnect_limit: -1
         }) as Connection;
@@ -282,41 +293,85 @@ export class ActiveMQArtemisService { // Name preserved
   }
 
   async close(): Promise<void> {
+    if (this.isShuttingDown) return;
     this.isShuttingDown = true;
     this.logger.info('Closing ActiveMQ Artemis connection...');
+    const closeTimeoutMs = 10000;
+
+    const doClose = async () => {
     
-    // Close all receivers first to stop accepting new messages
-    for (const [queueName, receiver] of this.receivers.entries()) {
-      try {
-        receiver.close();
-        this.logger.info(`Closed receiver for queue ${queueName}`);
-      } catch (error) {
-        this.logger.logError(`Error closing receiver for ${queueName}`, error as Error);
+      // Close all receivers first to stop accepting new messages
+      for (const [queueName, receiver] of this.receivers.entries()) {
+        try {
+          receiver.close();
+          this.logger.info(`Closed receiver for queue ${queueName}`);
+        } catch (error) {
+          this.logger.logError(`Error closing receiver for ${queueName}`, error as Error);
+        }
       }
-    }
-    this.receivers.clear();
+      this.receivers.clear();
 
-    // Close all senders
-    for (const [queueName, sender] of this.senders.entries()) {
-      try {
-        sender.close();
-        this.logger.info(`Closed sender for queue ${queueName}`);
-      } catch (error) {
-        this.logger.logError(`Error closing sender for ${queueName}`, error as Error);
+      // Close all senders
+      for (const [queueName, sender] of this.senders.entries()) {
+        try {
+          sender.close();
+          this.logger.info(`Closed sender for queue ${queueName}`);
+        } catch (error) {
+          this.logger.logError(`Error closing sender for ${queueName}`, error as Error);
+        }
       }
-    }
-    this.senders.clear();
+      this.senders.clear();
 
-    // Close the connection
-    if (this.connection) {
-      try {
-        this.connection.close();
-        this.logger.info('Closed ActiveMQ Artemis connection');
-      } catch (error) {
-        this.logger.logError('Error closing connection', error as Error);
+      // Close the connection
+      if (this.connection) {
+        try {
+          // Prevent reconnect attempts while we're shutting down
+          try {
+            // Attempt to disable reconnect behavior before closing.
+            // rhea doesn't provide a documented toggle here, so remove event listeners
+            // and try to flip common internal flags if present to avoid immediate reconnects.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const connAny = this.connection as unknown as Record<string, any>;
+            if (connAny) {
+              if (typeof connAny.removeAllListeners === 'function') {
+                connAny.removeAllListeners();
+              }
+              // some rhea versions expose internal options or flags we can defensively set
+              if (connAny.options && typeof connAny.options.reconnect !== 'undefined') {
+                try { connAny.options.reconnect = false; } catch {
+                  // swallow
+                }
+              }
+              try { connAny.reconnect = false; } catch {
+                // swallow
+              }
+            }
+          } catch {
+            // swallow - this is best-effort cleanup prior to close
+          }
+
+          this.connection.close();
+          this.logger.info('Closed ActiveMQ Artemis connection');
+        } catch (error) {
+          this.logger.logError('Error closing connection', error as Error);
+        }
+        this.connection = null;
       }
-      this.connection = null;
+    };
+
+    // race close against a timeout to avoid hanging shutdown; create timer before starting close
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeoutPromise = new Promise<void>((resolve) => {
+      timer = setTimeout(() => {
+        this.logger.error(`ActiveMQ Artemis close() timed out after ${closeTimeoutMs}ms`);
+        resolve();
+      }, closeTimeoutMs);
+    });
+
+    try {
+      await Promise.race([doClose(), timeoutPromise]);
+    } finally {
+      if (timer) clearTimeout(timer);
     }
   }
-  
 }
