@@ -16,18 +16,26 @@ export const mqRSSAddAll = async (
   
   await activeMQArtemisService.initialize();
 
-  for (const feed of feeds) {
-    const message: MQFeedMessage = {
-      url: feed.url,
-      podcast_index_id: feed.podcast_index_id,
-      options: msgOptions
-    };
+  try {
+    for (const feed of feeds) {
+      const message: MQFeedMessage = {
+        url: feed.url,
+        podcast_index_id: feed.podcast_index_id,
+        options: msgOptions
+      };
 
-    await activeMQArtemisService.sendMessage({
-      queueName: options.queueName,
-      message,
-      priority: options.priority,
-      dedupeCacheTimeMS: options.dedupeCacheTimeMS
-    });
+      await activeMQArtemisService.sendMessage({
+        queueName: options.queueName,
+        message,
+        priority: options.priority,
+        dedupeCacheTimeMS: options.dedupeCacheTimeMS
+      });
+    }
+  } finally {
+    try {
+      await activeMQArtemisService.close();
+    } catch {
+      // swallow
+    }
   }
 };

@@ -20,25 +20,33 @@ export const mqRSSAddRecentlyUpdatedFeedsFromPodcastIndex = async (
   
   await activeMQArtemisService.initialize();
 
-  for (const feed of recentlyUpdatedFeeds) {
-    const feedService = new FeedService();
-    const podcast_index_id = feed.feedId;
-    const dbFeed = await feedService.getByPodcastIndexId(podcast_index_id);
-    const shouldAddToQueue = !!dbFeed;
+  try {
+    for (const feed of recentlyUpdatedFeeds) {
+      const feedService = new FeedService();
+      const podcast_index_id = feed.feedId;
+      const dbFeed = await feedService.getByPodcastIndexId(podcast_index_id);
+      const shouldAddToQueue = !!dbFeed;
 
-    if (shouldAddToQueue) {
-      const message: MQFeedMessage = {
-        url: feed.feedUrl,
-        podcast_index_id: feed.feedId,
-        options: msgOptions
-      };
+      if (shouldAddToQueue) {
+        const message: MQFeedMessage = {
+          url: feed.feedUrl,
+          podcast_index_id: feed.feedId,
+          options: msgOptions
+        };
   
-      await activeMQArtemisService.sendMessage({
-        queueName: options.queueName,
-        message,
-        priority: options.priority,
-        dedupeCacheTimeMS: options.dedupeCacheTimeMS
-      });
+        await activeMQArtemisService.sendMessage({
+          queueName: options.queueName,
+          message,
+          priority: options.priority,
+          dedupeCacheTimeMS: options.dedupeCacheTimeMS
+        });
+      }
+    }
+  } finally {
+    try {
+      await activeMQArtemisService.close();
+    } catch {
+      // swallow
     }
   }
 };
