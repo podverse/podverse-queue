@@ -1,10 +1,10 @@
 import { FeedService } from "podverse-orm";
 import { ActiveMQArtemisService } from "@queue/services/activeMQArtemis";
 import { MQFeedMessage } from "@queue/types/mq";
-import { MQQueueConfig } from "podverse-helpers";
+import { MQQueueConfigFunctionParams } from "podverse-helpers";
 import { ParseRSSFeedAndSaveToDatabaseOptions } from "podverse-parser";
 
-type MQRSSAddAllConfig = MQQueueConfig;
+type MQRSSAddAllConfig = MQQueueConfigFunctionParams;
 
 export const mqRSSAddAll = async (
   activeMQArtemisService: ActiveMQArtemisService,
@@ -33,7 +33,9 @@ export const mqRSSAddAll = async (
     }
   } finally {
     try {
-      await activeMQArtemisService.close();
+      if (options.closeAfterSend) {
+        await activeMQArtemisService.close();
+      }
     } catch {
       // swallow
     }

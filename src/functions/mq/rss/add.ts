@@ -1,9 +1,9 @@
 import { ActiveMQArtemisService } from "@queue/services/activeMQArtemis";
 import { MQFeedMessage } from "@queue/types/mq";
-import { MQQueueConfig } from "podverse-helpers";
+import { MQQueueConfigFunctionParams } from "podverse-helpers";
 import { ParseRSSFeedAndSaveToDatabaseOptions } from "podverse-parser";
 
-type MQRSSAddOptions = MQQueueConfig & {
+type MQRSSAddOptions = MQQueueConfigFunctionParams & {
   feedUrl: string;
   podcast_index_id: number;
 }
@@ -30,7 +30,9 @@ export const mqRSSAdd = async (
     });
   } finally {
     try {
-      await activeMQArtemisService.close();
+      if (options.closeAfterSend) {
+        await activeMQArtemisService.close();
+      }
     } catch {
       // swallow
     }
