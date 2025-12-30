@@ -1,10 +1,10 @@
 import { FeedService } from "podverse-orm";
 import { ActiveMQArtemisService } from "@queue/services/activeMQArtemis";
 import { MQFeedMessage } from "@queue/types/mq";
-import { MQQueueConfig } from "podverse-helpers";
+import { MQQueueConfigFunctionParams } from "podverse-helpers";
 import { ParseRSSFeedAndSaveToDatabaseOptions } from "podverse-parser";
 
-type MQRSSAddAllConfig = MQQueueConfig;
+type MQRSSAddAllConfig = MQQueueConfigFunctionParams;
 
 export const mqRSSAddAll = async (
   activeMQArtemisService: ActiveMQArtemisService,
@@ -16,18 +16,28 @@ export const mqRSSAddAll = async (
   
   await activeMQArtemisService.initialize();
 
-  for (const feed of feeds) {
-    const message: MQFeedMessage = {
-      url: feed.url,
-      podcast_index_id: feed.podcast_index_id,
-      options: msgOptions
-    };
+  try {
+    for (const feed of feeds) {
+      const message: MQFeedMessage = {
+        url: feed.url,
+        podcast_index_id: feed.podcast_index_id,
+        options: msgOptions
+      };
 
-    await activeMQArtemisService.sendMessage({
-      queueName: options.queueName,
-      message,
-      priority: options.priority,
-      dedupeCacheTimeMS: options.dedupeCacheTimeMS
-    });
+      await activeMQArtemisService.sendMessage({
+        queueName: options.queueName,
+        message,
+        priority: options.priority,
+        dedupeCacheTimeMS: options.dedupeCacheTimeMS
+      });
+    }
+  } finally {
+    try {
+      if (options.closeAfterSend) {
+        await activeMQArtemisService.close();
+      }
+    } catch {
+      // swallow
+    }
   }
 };

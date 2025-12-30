@@ -91,7 +91,8 @@ export const mqRSSRunLiveItemListener = (
                     {
                       ...mqConstantMessageOptions,
                       feedUrl: addRSSObj.url,
-                      podcast_index_id: addRSSObj.podcast_index_id
+                      podcast_index_id: addRSSObj.podcast_index_id,
+                      closeAfterSend: false
                     },
                     {
                       forceParse: true,
