@@ -1,6 +1,6 @@
 import rhea from 'rhea';
 import { Connection, Sender, Receiver, EventContext } from 'rhea';
-import { LoggerService } from 'podverse-helpers/dist/lib/backend/logger';
+import { ILoggerLike } from 'podverse-helpers/dist/lib/backend/logger';
 import crypto from 'crypto';
 import { getContainerIpPart } from 'podverse-helpers/dist/lib/backend/os';
 import { ParseRSSFeedAndSaveToDatabaseOptions } from 'podverse-parser/dist/lib/rss/parser';
@@ -39,7 +39,7 @@ export class ActiveMQArtemisService { // Name preserved
   private senders: Map<MQQueueName, Sender> = new Map();
   private receivers: Map<MQQueueName, Receiver> = new Map();
   private params: ActiveMQArtemisServiceParams;
-  private logger: LoggerService;
+  private logger: ILoggerLike;
   private connecting = false;
   private isShuttingDown = false;
   private readonly tcpKeepAliveMs: number = 30000;
@@ -49,7 +49,7 @@ export class ActiveMQArtemisService { // Name preserved
   private heartbeatSender: Sender | null = null;
   private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 
-  constructor(params: ActiveMQArtemisServiceParams, logger: LoggerService) {
+  constructor(params: ActiveMQArtemisServiceParams, logger: ILoggerLike) {
     this.params = params;
     this.logger = logger;
   }
