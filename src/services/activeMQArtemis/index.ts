@@ -147,7 +147,6 @@ export class ActiveMQArtemisService { // Name preserved
                     this.heartbeatSender = hbSender;
                     if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
                     const heartbeatMs = Number(process.env.ARTEMIS_AMQP_PING_MS ?? Math.max(1000, Math.floor(this.idleTimeOutMs / 2)));
-                    this.logger.info('AMQP heartbeat interval (ms)', { heartbeatMs });
                     this.heartbeatInterval = setInterval(() => {
                       try {
                         if (this.heartbeatSender) {
