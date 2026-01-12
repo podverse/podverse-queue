@@ -1,9 +1,9 @@
 import { ActiveMQArtemisService, MQQueueName } from '../../../services/activeMQArtemis';
-import { EventContext } from 'rhea';
+import { EventContext, Receiver } from 'rhea';
 
 export type DQLMessageLogger = (logMessage: string) => void;
 
-const processDlqMessage = (context: EventContext, queue: string, logger: DQLMessageLogger) => {
+const processDlqMessage = (context: EventContext, queue: string, logger: DQLMessageLogger, receiver: Receiver) => {
   try {
     const bodyRaw = context.message?.body;
     const bodyStr = typeof bodyRaw === 'string' ? bodyRaw : bodyRaw?.toString?.() ?? '';
@@ -30,6 +30,7 @@ const processDlqMessage = (context: EventContext, queue: string, logger: DQLMess
 
     logger(JSON.stringify(logObject));
     context.delivery?.accept();
+    receiver.add_credit(1);
   } catch (error) {
     const errorObject = {
       level: 'error',
@@ -41,6 +42,7 @@ const processDlqMessage = (context: EventContext, queue: string, logger: DQLMess
     };
     logger(JSON.stringify(errorObject));
     context.delivery?.reject({ condition: 'dlq-processing-error', description: (error as Error).message });
+    receiver.add_credit(1);
   }
 };
 
@@ -50,7 +52,7 @@ function safeJson(s: string) {
 
 export const mqRSSSetupDlqConsumers = async (artemisService: ActiveMQArtemisService, logger: DQLMessageLogger) => {
   const dlqQueues: MQQueueName[] = ['DLQ.rss-normal', 'DLQ.rss-on-demand', 'DLQ.rss-live'];
-  
+
   for (let i = 0; i < 10; i++) {
     await artemisService.sendSampleToDLQ(
       'rss-normal',
@@ -70,8 +72,8 @@ export const mqRSSSetupDlqConsumers = async (artemisService: ActiveMQArtemisServ
   }
 
   for (const q of dlqQueues) {
-    await artemisService.consumeMessages(q, (context: EventContext) => {
-      processDlqMessage(context, q, logger);
+    await artemisService.consumeMessages(q, (context: EventContext, receiver: Receiver) => {
+      processDlqMessage(context, q, logger, receiver);
     });
   }
 };

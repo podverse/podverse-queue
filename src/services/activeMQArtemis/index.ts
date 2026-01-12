@@ -360,24 +360,23 @@ export class ActiveMQArtemisService { // Name preserved
     }
   }
 
-  async consumeMessages(queueName: MQQueueName, processMessage: (context: EventContext) => Promise<void> | void) {
+  async consumeMessages(queueName: MQQueueName, processMessage: (context: EventContext, receiver: Receiver) => Promise<void> | void) {
     try {
       const receiver = await this.ensureReceiver(queueName);
 
       receiver.on('message', async (context: EventContext) => {
         if (context.receiver !== receiver) return;
         try {
-          // The processing function is now responsible for accepting/rejecting.
-          await processMessage(context);
+          // The processing function is now responsible for accepting/rejecting and adding credit.
+          await processMessage(context, receiver);
         } catch (err) {
           const error = err as Error;
           this.logger.logError('Error processing message', error);
-          // If the processor throws, reject the message as a fallback.
+          // If the processor throws, reject the message as a fallback and add credit.
           context.delivery?.reject({
             condition: 'podverse:processing-error',
             description: error.message
           });
-        } finally {
           receiver.add_credit(1);
         }
       });

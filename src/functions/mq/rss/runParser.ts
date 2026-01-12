@@ -9,7 +9,7 @@ export const mqRSSRunParser = async (
 ) => {
   await activeMQArtemisService.initialize();
 
-  await activeMQArtemisService.consumeMessages(queueName, async (context) => {
+  await activeMQArtemisService.consumeMessages(queueName, async (context, receiver) => {
     try {
       const bodyStr = (context.message?.body as string) ?? '';
       const receivedMessage = JSON.parse(bodyStr);
@@ -17,7 +17,7 @@ export const mqRSSRunParser = async (
       const { url, podcast_index_id, options } = receivedMessage;
       if (url || podcast_index_id) {
         const result = await parseRSSFeedAndSaveToDatabase(url, podcast_index_id, options);
-        
+
         if (result && Array.isArray(result.remoteItemsToParse) && result.remoteItemsToParse.length > 0) {
           const mqConfig = MQ_QUEUES['rss-slow'];
           for (const item of result.remoteItemsToParse) {
@@ -29,6 +29,7 @@ export const mqRSSRunParser = async (
           }
         }
         context.delivery?.accept();
+        receiver.add_credit(1);
       } else {
         throw new Error(`mqRSSRunParser: url or podcast_index_id not found in message ${bodyStr}`);
       }
@@ -38,6 +39,7 @@ export const mqRSSRunParser = async (
         condition: 'podverse:processing-error',
         description: (error as Error).message,
       });
+      receiver.add_credit(1);
     }
   });
 };
